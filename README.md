@@ -1,80 +1,48 @@
 <a id="top"></a>
 
-# iVolve DevOps Labs
-*Build it. Ship it. Learn by doing.* 🚀<br>
-Hands-on DevOps labs from the iVolve training, starting with Java builds and containers.<br>
-The journey continues toward Kubernetes, CI/CD, GitOps, and automation.<br>
-**Jump to:** [Environment](#environment) · [Repo map](#repo-map) · [Build Tools](#build-tools) · [Docker](#docker) · [Kubernetes](#kubernetes) · [Jenkins](#jenkins) · [ArgoCD](#argocd) · [Ansible](#ansible)
+<div align="center">
+  <h1>iVolve DevOps Labs</h1>
+  <p><strong>Practical steps from Java builds to containers.</strong></p>
+  <p>Hands-on labs from the iVolve training, focused on building, testing, and packaging a Java calculator with different tools and container workflows.</p>
+</div>
 
-<a id="environment"></a>
+**Jump to:** [Lab 1 · Maven](#lab1-maven) · [Lab 2 · Gradle](#lab2-gradle) · [Lab 3 · Docker](#lab3-docker) · [Planned areas](#planned-areas)
 
-## Environment
-All labs were run in Ubuntu on WSL 2 (Windows Subsystem for Linux) with Docker Desktop's WSL integration.<br>
-That means these are real Linux commands in an Ubuntu shell, not Windows PowerShell.
+Documented environment: Ubuntu on WSL 2, Java 17, Maven, Gradle, and Docker Desktop.
 
-| Operating system | Java | Build tools | Container engine |
-| --- | --- | --- | --- |
-| Ubuntu on WSL 2 | Java 17 | Maven · Gradle | Docker Desktop |
-[⬆️ Back to top](#top)
+---
 
-<a id="repo-map"></a>
+<a id="lab1-maven"></a>
+## Build Tools
 
-## Repo map
-```text
-IVOLVE-Labs/
-├── Build Tools/             # Java build-tool labs
-│   ├── Lab1/                # Maven
-│   └── Lab2/                # Gradle
-├── Docker/                  # Container labs
-│   └── Lab3/                # Build and compare Docker images
-├── (coming soon) Kubernetes, Jenkins, ArgoCD, Ansible
-└── README.md                # This landing page
-```
-[⬆️ Back to top](#top)
+### [Lab 1 · Build and test with Maven](./Build%20Tools/Lab1/README.md) — ✅ Completed
 
-<a id="build-tools"></a>
+Builds and tests a Java console calculator with Maven, packages an executable JAR, and verifies its arithmetic output.
 
-## Build Tools 🛠️
-Maven and Gradle help build, test, and package Java applications reliably.
-<!-- To add a new lab: copy a row and update the lab name, description, status and link -->
+<a id="lab2-gradle"></a>
+### [Lab 2 · Build and test with Gradle](./Build%20Tools/Lab2/README.md) — ✅ Completed
 
-| Lab | What it covers | Status |
-| --- | --- | --- |
-| [Lab 1: Maven](./Build%20Tools/Lab1/README.md) | Building, testing, and packaging a Java app with Maven. | ✅ Done |
-| [Lab 2: Gradle](./Build%20Tools/Lab2/README.md) | Building, testing, and packaging a Java app with Gradle. | ✅ Done |
-[⬆️ Back to top](#top)
+Builds and tests the Java console calculator with Gradle, packages an executable JAR, and verifies its arithmetic output.
 
-<a id="docker"></a>
+---
 
-## Docker 🐳
-Docker packages an application and its runtime so it can run consistently across environments.
-<!-- To add a new lab: copy a row and update the lab name, description, status and link -->
+<a id="lab3-docker"></a>
+## Docker
 
-| Lab | What it covers | Status |
-| --- | --- | --- |
-| [Lab 3](./Docker/Lab3/README.md) | Building a Java image inside Docker vs. building locally, plus an image-size comparison bonus. | ✅ Done |
-[⬆️ Back to top](#top)
+### [Lab 3 · Build and compare Docker images](./Docker/Lab3/README.md) — ✅ Completed
 
-<a id="kubernetes"></a>
+Compares building the Java application inside a Maven Docker image with building it locally and copying its JAR into a JRE image, including an image-size comparison.
 
-## Kubernetes ☸️
-Kubernetes runs and manages containers at scale.<br>
-🚧 Coming soon<br>[⬆️ Back to top](#top)
+---
 
-<a id="jenkins"></a>
+<a id="planned-areas"></a>
+## Planned areas
 
-## Jenkins ⚙️
-Jenkins automates CI/CD pipelines that build, test, and ship software.<br>
-🚧 Coming soon<br>[⬆️ Back to top](#top)
+These topics are not implemented in the repository yet:
 
-<a id="argocd"></a>
+- Kubernetes
+- Jenkins
+- Argo CD
+- Ansible
 
-## ArgoCD
-ArgoCD brings GitOps to Kubernetes by deploying applications straight from Git.<br>
-🚧 Coming soon<br>[⬆️ Back to top](#top)
-
-<a id="ansible"></a>
-
-## Ansible
-Ansible automates configuration management across systems.<br>
-🚧 Coming soon<br>[⬆️ Back to top](#top)
+<p align="center"><sub>iVolve training · DevOps lab notes</sub></p>
