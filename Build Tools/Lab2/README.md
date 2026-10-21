@@ -1,70 +1,85 @@
-# Lab 2: Build with Gradle
+# Lab 2: Gradle
 
-Use Gradle to test, build, and run the Java calculator in Ubuntu on WSL 2.
+**Goal:** Test, build, and run the Java calculator with Gradle.
 
-> The course slide says “Go Application,” but the linked application is Java and produces a `.jar`.
+**Environment:** Ubuntu on WSL 2 (see the [root README](../../README.md)).
 
-## Prerequisites
+> The slide says “Go Application,” but this project is Java.
 
-- Git
-- Java Development Kit 17
-- Gradle
+## Steps
 
-Install Java and SDKMAN prerequisites in Ubuntu:
+1. Install Java 17 and the tools required by SDKMAN.
 
-```bash
-sudo apt update
-sudo apt install -y openjdk-17-jdk git curl zip unzip
-```
+   ```bash
+   sudo apt update
+   sudo apt install -y openjdk-17-jdk git curl zip unzip
+   curl -s "https://get.sdkman.io" | bash
+   source "$HOME/.sdkman/bin/sdkman-init.sh"
+   sdk install gradle
+   java -version
+   gradle --version
+   ```
 
-Install Gradle with SDKMAN if it is not already installed:
+   Expect Java 17 and Gradle version details.
 
-```bash
-curl -s "https://get.sdkman.io" | bash
-source "$HOME/.sdkman/bin/sdkman-init.sh"
-sdk install gradle
-java -version
-gradle --version
-```
+2. Enter the Gradle project and load SDKMAN.
 
-## Run the lab
+   ```bash
+   source "$HOME/.sdkman/bin/sdkman-init.sh"
+   cd "Build Tools/Lab2/CalculatorGradleApp"
+   ```
 
-From the repository root, enter the included project:
+   Expect to be in the directory containing `build.gradle`.
 
-```bash
-source "$HOME/.sdkman/bin/sdkman-init.sh"
-cd "Build Tools/Lab2/CalculatorGradleApp"
-gradle test
-gradle build
-ls -lh build/libs/calculator.jar
-printf '2\n3\n' | java -jar build/libs/calculator.jar
-```
+3. Run the tests.
 
-The test suite should pass, and the executable JAR should print a sum of `5.0`, subtraction of `-1.0`, multiplication of `6.0`, and division of `0.666...`.
+   ```bash
+   gradle test
+   ```
 
-## WSL run evidence
+   Expect `BUILD SUCCESSFUL` with no failed tests.
 
-The screenshots below show output from the commands run in WSL.
+4. Build the application.
 
-### Unit tests
+   ```bash
+   gradle build
+   ls -lh build/libs/calculator.jar
+   ```
 
-![Gradle tests passed](./screenshots/03-unit-tests.png)
+   Expect `BUILD SUCCESSFUL` and the JAR file to be listed.
 
-### Build and executable JAR
+5. Run the calculator.
 
-![Gradle build and JAR](./screenshots/04-build.png)
+   ```bash
+   java -jar build/libs/calculator.jar
+   ```
 
-### Calculator output
+   Expect the console app to prompt for two numbers.
+
+6. Verify with sample input.
+
+   ```bash
+   printf '2\n3\n' | java -jar build/libs/calculator.jar
+   ```
+
+   Expect Sum `5.0`, Subtract `-1.0`, Multiply `6.0`, and Divide `0.666...`.
+
+## Result
+
+The Gradle tests and build passed, and the packaged calculator produced the expected results.
+
+![Gradle test results](./screenshots/03-unit-tests.png)
+*Proves the Gradle tests passed.*
+
+![Gradle build result](./screenshots/04-build.png)
+*Proves Gradle built the executable calculator JAR.*
 
 ![Gradle calculator output](./screenshots/05-run-and-verify.png)
-
-### Tool versions
-
-![Java and Gradle versions in WSL](./screenshots/01-tools-version.png)
+*Proves the calculator returned the expected results for 2 and 3.*
 
 ## Cleanup
 
-From `CalculatorGradleApp`, remove generated build files while keeping the source:
+Remove generated output from the project directory.
 
 ```bash
 rm -rf build

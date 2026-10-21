@@ -1,59 +1,79 @@
-# Lab 1: Build with Maven
+# Lab 1: Maven
 
-Use Maven to test, package, and run the Java calculator in Ubuntu on WSL 2.
+**Goal:** Test, package, and run the Java calculator with Maven.
 
-## Prerequisites
+**Environment:** Ubuntu on WSL 2 (see the [root README](../../README.md)).
 
-- Git
-- Java Development Kit 17
-- Apache Maven
+## Steps
 
-Install the tools in Ubuntu if needed:
+1. Install Java 17, Maven, and Git.
 
-```bash
-sudo apt update
-sudo apt install -y openjdk-17-jdk maven git
-java -version
-mvn -version
-```
+   ```bash
+   sudo apt update
+   sudo apt install -y openjdk-17-jdk maven git
+   java -version
+   mvn -version
+   ```
 
-## Run the lab
+   Expect Java 17 and Maven version details.
 
-From the repository root, enter the included project:
+2. Enter the Maven project.
 
-```bash
-cd "Build Tools/Lab1/CalculatorMavenApp"
-mvn test
-mvn package
-ls -lh target/calculator.jar
-printf '2\n3\n' | java -jar target/calculator.jar
-```
+   ```bash
+   cd "Build Tools/Lab1/CalculatorMavenApp"
+   ```
 
-The test suite should report 5 tests with no failures. The runnable JAR should print a sum of `5.0`, subtraction of `-1.0`, multiplication of `6.0`, and division of `0.666...`.
+   Expect to be in the directory containing `pom.xml`.
 
-## WSL run evidence
+3. Run the tests.
 
-The screenshots below show output from the commands run in WSL.
+   ```bash
+   mvn test
+   ```
 
-### Unit tests
+   Expect 5 tests to pass with no failures and `BUILD SUCCESS`.
 
-![Maven tests passed: 5 tests, no failures](./screenshots/03-unit-tests.png)
+4. Package the application.
 
-### Package and executable JAR
+   ```bash
+   mvn package
+   ls -lh target/calculator.jar
+   ```
 
-![Maven package and JAR](./screenshots/04-package.png)
+   Expect `BUILD SUCCESS` and the JAR file to be listed.
 
-### Calculator output
+5. Run the calculator.
+
+   ```bash
+   java -jar target/calculator.jar
+   ```
+
+   Expect the console app to prompt for two numbers.
+
+6. Verify with sample input.
+
+   ```bash
+   printf '2\n3\n' | java -jar target/calculator.jar
+   ```
+
+   Expect Sum `5.0`, Subtract `-1.0`, Multiply `6.0`, and Divide `0.666...`.
+
+## Result
+
+The Maven tests passed, and the packaged calculator produced the expected results.
+
+![Maven test results](./screenshots/03-unit-tests.png)
+*Proves that all five Maven tests passed.*
+
+![Maven package result](./screenshots/04-package.png)
+*Proves Maven packaged the calculator JAR successfully.*
 
 ![Maven calculator output](./screenshots/05-run-and-verify.png)
-
-### Tool versions
-
-![Java and Maven versions in WSL](./screenshots/01-tools-version.png)
+*Proves the calculator returned the expected results for 2 and 3.*
 
 ## Cleanup
 
-From `CalculatorMavenApp`, remove generated build files while keeping the source:
+Remove generated output from the project directory.
 
 ```bash
 rm -rf target
