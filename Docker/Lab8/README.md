@@ -1,60 +1,67 @@
 # Lab 8: Node.js and MySQL with Docker Compose
 
-## Objective
+**Goal:** Run the Node.js app with MySQL using Compose, health-gated startup, and persistent database and application log volumes.
 
-Run the Node.js site and MySQL together with Compose, health-gated startup, and persistent database and application log volumes.
+**Environment:** Ubuntu on WSL 2 with Docker Desktop and Docker Compose (see the [root README](../../README.md)).
 
-## Implementation
+## Steps
 
-Compose builds the app from `app/Dockerfile` and connects it to the `mysql` service on `ivolve-net`. MySQL initializes database `ivolve` and the app user from local environment values. The Node app creates and seeds its products table, and its health and product endpoints query MySQL.
+1. Enter the application directory and create a local environment file.
 
-## Project Structure
+   ```bash
+   cd "Docker/Lab8/app"
+   cp .env.example .env
+   ```
 
-```text
-Lab8/
-├── README.md
-└── app/
-    ├── Dockerfile
-    ├── docker-compose.yml
-    ├── .env.example
-    ├── server.js
-    ├── db.js
-    └── frontend/
-```
+   Edit `.env` and replace `DOCKERHUB_USERNAME`, `MYSQL_ROOT_PASSWORD`, and `DB_PASSWORD` with your own values. Do not commit this file.
 
-## Configure and Run
+2. Validate the Compose configuration and start the services.
 
-Run from `Docker/Lab8/app` in Bash. Copy the example file and replace the placeholder values locally:
+   ```bash
+   docker compose config --quiet
+   docker compose up --build -d
+   docker compose ps
+   ```
 
-```bash
-cp .env.example .env
-# Set DOCKERHUB_USERNAME, MYSQL_ROOT_PASSWORD, and DB_PASSWORD in .env.
-docker compose up --build -d
-docker compose ps
-curl http://localhost:3000/
-curl http://localhost:3000/health
-curl http://localhost:3000/api/products
-docker compose logs app mysql
-```
+   Expect both services to start, with MySQL passing its health check before the app starts.
 
-The stack reached healthy status, `/health` confirmed the database connection, and `/api/products` returned three seeded rows from `ivolve.products`. The app ran as user `node` with `/app/logs` mounted.
+3. Verify the site, database connection, and product data.
+
+   ```bash
+   curl http://localhost:3000/
+   curl http://localhost:3000/health
+   curl http://localhost:3000/api/products
+   docker compose logs app mysql
+   ```
+
+   Expect the site to load, `/health` to confirm its MySQL connection, and `/api/products` to return the three seeded products.
+
+4. Build and push the app image when you are ready to publish it.
+
+   ```bash
+   docker login
+   docker compose build app
+   docker compose push app
+   ```
+
+   Expect the image to use the Docker Hub username configured in `.env`. This lab was verified locally; no image was pushed.
+
+The Compose stack uses network `ivolve-net`, volume `db_data` for MySQL files, and volume `app_logs` for app logs at `/app/logs`. The app runs as the non-root `node` user.
+
+## Result
+
+MySQL became healthy, the app connected successfully, and `/api/products` returned three rows from `ivolve.products`.
 
 <!-- Screenshot placeholder: healthy Compose services -->
-<!-- Screenshot placeholder: application page and product API -->
-<!-- Screenshot placeholder: persisted app logs and database volume -->
+<!-- Screenshot placeholder: app page and product API response -->
+<!-- Screenshot placeholder: persisted application log volume -->
 
-## Build and Publish
+## Cleanup
 
-To publish the app image, authenticate with Docker Hub and use the username configured in `.env`:
+Stop and remove the Compose services and network:
 
 ```bash
-docker login
-docker compose build app
-docker compose push app
+docker compose down
 ```
 
-No image was pushed during verification. `.env` is ignored by Git; `.env.example` contains placeholders only. The image tag is `DOCKERHUB_USERNAME/ivolve-app:latest`.
-
-## Configuration Notes
-
-The Compose network is `ivolve-net`. `db_data` persists MySQL data at `/var/lib/mysql`, and `app_logs` persists application logs at `/app/logs`. Use `docker compose down` to stop and remove the stack; `docker compose down -v` also removes its persistent volumes.
+The database and log volumes are preserved. Add `-v` only when you intentionally want Compose to remove those persistent volumes too.

@@ -1,41 +1,54 @@
 # Lab 5: Docker Image Vulnerability Scanning
 
-## Objective
+**Goal:** Scan a baseline Node.js image with Trivy, update its runtime and dependencies, and compare the findings.
 
-Scan a baseline Node.js image with Trivy, update its runtime and dependencies, then compare the scan results.
+**Environment:** Ubuntu on WSL 2 with Docker Desktop and Trivy installed (see the [root README](../../README.md)).
 
-## Implementation
+## Steps
 
-`app/Dockerfile.v1` and `app/package.json.v1` preserve the Node 18 Bullseye / Express 4.18.2 baseline. The current `app/Dockerfile` builds `ivolve-app:v2` with Node 22 Alpine, production dependencies, and the non-root `node` user. `app/package.json` updates Express and the affected `body-parser`, `path-to-regexp`, and `qs` dependencies.
+1. Enter the application directory and check Trivy.
 
-## Project Structure
+   ```bash
+   cd "Docker/Lab5/app"
+   trivy --version
+   ```
 
-```text
-Lab5/
-├── README.md
-└── app/
-    ├── Dockerfile[.v1]
-    ├── package.json[.v1]
-    ├── app.js
-    ├── scan.sh
-    └── reports/                 # generated scan output, ignored by Git
-```
+   Expect Trivy to print its version. The scan script requires the `trivy` command to be available in this shell.
 
-## Build and Verify
+2. Build the baseline image.
 
-Run from `Docker/Lab5/app` with Docker and Trivy available:
+   ```bash
+   docker build -f Dockerfile.v1 -t trivy-lab:v1 .
+   docker image ls trivy-lab:v1
+   ```
 
-```bash
-docker build -f Dockerfile.v1 -t trivy-lab:v1 .
-docker build -t ivolve-app:v2 .
-sh scan.sh
-```
+   Expect the image to use the preserved Node 18 Bullseye and Express 4.18.2 baseline.
 
-Open `reports/trivy-lab-v1.html` and `reports/ivolve-app-v2.html`. The script also saves JSON and text scan output under `reports/`; generated reports are ignored by Git.
+3. Scan the baseline and updated images.
+
+   ```bash
+   sh scan.sh
+   ```
+
+   The script scans `trivy-lab:v1`, builds `ivolve-app:v2` from the current Dockerfile, and scans the updated image. Expect HTML, JSON, and text reports under `reports/`.
+
+4. Review the HTML reports.
+
+   Open `reports/trivy-lab-v1.html` and `reports/ivolve-app-v2.html`. The baseline scan reported 2,143 HIGH and 219 CRITICAL findings; the updated scan reported zero vulnerabilities across severities.
+
+The updated image uses Node 22 Alpine, production dependencies, compatible fixes for the reported Express dependency findings, and the non-root `node` user. Generated reports are ignored by Git and remain in `app/reports/`.
+
+## Result
+
+Trivy 0.76.1 reported the baseline and updated findings described above. The updated app also returned `{"status":"UP"}` from its `/health` endpoint.
 
 <!-- Screenshot placeholder: baseline Trivy findings -->
 <!-- Screenshot placeholder: updated Trivy report and zero-vulnerability summary -->
 
-## Results
+## Cleanup
 
-With Trivy 0.76.1, the baseline scan reported 2,143 HIGH and 219 CRITICAL findings. The updated image scan reported zero vulnerabilities across severities. Its `/health` endpoint returned `{"status":"UP"}`. Existing scan reports are preserved in `app/reports/`.
+Remove only the image tags created for this lab if you no longer need them. The local reports are preserved:
+
+```bash
+docker image rm trivy-lab:v1 ivolve-app:v2
+```
