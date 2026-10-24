@@ -35,11 +35,6 @@ Builds and tests the Java console calculator with Gradle, packages an executable
 
 Compares building the Java application inside a Maven Docker image with building it locally and copying its JAR into a JRE image, including an image-size comparison.
 
----
-
-<a id="labs-4-8"></a>
-## Docker Labs 4–8
-
 ### [Lab 4 · Image optimization](./Docker/Lab4/README.md) — ✅ Completed
 
 Compares a single-stage Spring Boot image with a multi-stage, non-root runtime image and demonstrates image save/load.
