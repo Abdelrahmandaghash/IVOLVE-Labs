@@ -1,80 +1,27 @@
-# Lab 1: Maven
+# Lab 1: Building and Packaging a Java Application with Maven
 
 **Goal:** Test, package, and run the Java calculator with Maven.
 
-**Environment:** Ubuntu on WSL 2 (see the [root README](../../README.md)).
+**Environment:** Ubuntu on WSL 2 with Java 17 and Maven (see the [root README](../../README.md)).
+
+**Source application:** [CalculatorMavenApp on GitHub](https://github.com/Ibrahim-Adel15/CalculatorMavenApp).
 
 ## Steps
 
-1. Install Java 17, Maven, and Git.
-
-   ```bash
-   sudo apt update
-   sudo apt install -y openjdk-17-jdk maven git
-   java -version
-   mvn -version
-   ```
-
-   Expect Java 17 and Maven version details.
-
-2. Enter the Maven project.
-
-   ```bash
-   cd "Build Tools/Lab1/CalculatorMavenApp"
-   ```
-
-   Expect to be in the directory containing `pom.xml`.
-
-3. Run the tests.
-
-   ```bash
-   mvn test
-   ```
-
-   Expect 5 tests to pass with no failures and `BUILD SUCCESS`.
-
-4. Package the application.
-
-   ```bash
-   mvn package
-   ls -lh target/calculator.jar
-   ```
-
-   Expect `BUILD SUCCESS` and the JAR file to be listed.
-
-5. Run the calculator.
-
-   ```bash
-   java -jar target/calculator.jar
-   ```
-
-   Expect the console app to prompt for two numbers.
-
-6. Verify with sample input.
-
-   ```bash
-   printf '2\n3\n' | java -jar target/calculator.jar
-   ```
-
-   Expect Sum `5.0`, Subtract `-1.0`, Multiply `6.0`, and Divide `0.666...`.
-
+1. Installed Java 17, Maven, and Git, then checked that Java and Maven were available in the Ubuntu environment.
+2. Cloned the Maven calculator project and opened the project directory containing its `pom.xml`.
+3. Ran the Maven unit tests. All five tests passed.
+4. Packaged the application. Maven completed successfully and produced `target/calculator.jar`.
+5. Ran the packaged JAR and supplied `2` and `3` as sample inputs. The calculator returned a sum of `5.0`, a difference of `-1.0`, a product of `6.0`, and a quotient of approximately `0.6667`.
 ## Result
 
-The Maven tests passed, and the packaged calculator produced the expected results.
+The Maven tests passed, the executable JAR was created, and the calculator returned the expected results.
 
 ![Maven test results](./screenshots/03-unit-tests.png)
-*Proves that all five Maven tests passed.*
+*Shows all five Maven tests passing.*
 
 ![Maven package result](./screenshots/04-package.png)
-*Proves Maven packaged the calculator JAR successfully.*
+*Shows Maven packaging the calculator JAR successfully.*
 
 ![Maven calculator output](./screenshots/05-run-and-verify.png)
-*Proves the calculator returned the expected results for 2 and 3.*
-
-## Cleanup
-
-Remove generated output from the project directory.
-
-```bash
-rm -rf target
-```
+*Shows the calculator results for inputs 2 and 3.*

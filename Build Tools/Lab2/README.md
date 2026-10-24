@@ -1,86 +1,29 @@
-# Lab 2: Gradle
+# Lab 2: Building and Packaging the Calculator with Gradle
 
-**Goal:** Test, build, and run the Java calculator with Gradle.
+**Goal:** Test, build, and run the calculator with Gradle.
 
-**Environment:** Ubuntu on WSL 2 (see the [root README](../../README.md)).
+**Environment:** Ubuntu on WSL 2 with Java 17 and Gradle (see the [root README](../../README.md)).
 
-> The slide says “Go Application,” but this project is Java.
+**Source application:** [CalculatorGradleApp on GitHub](https://github.com/Ibrahim-Adel15/CalculatorGradleApp).
+
+> The PDF labels this a Go application, but the supplied project and the completed work are Java.
 
 ## Steps
 
-1. Install Java 17 and the tools required by SDKMAN.
-
-   ```bash
-   sudo apt update
-   sudo apt install -y openjdk-17-jdk git curl zip unzip
-   curl -s "https://get.sdkman.io" | bash
-   source "$HOME/.sdkman/bin/sdkman-init.sh"
-   sdk install gradle
-   java -version
-   gradle --version
-   ```
-
-   Expect Java 17 and Gradle version details.
-
-2. Enter the Gradle project and load SDKMAN.
-
-   ```bash
-   source "$HOME/.sdkman/bin/sdkman-init.sh"
-   cd "Build Tools/Lab2/CalculatorGradleApp"
-   ```
-
-   Expect to be in the directory containing `build.gradle`.
-
-3. Run the tests.
-
-   ```bash
-   gradle test
-   ```
-
-   Expect `BUILD SUCCESSFUL` with no failed tests.
-
-4. Build the application.
-
-   ```bash
-   gradle build
-   ls -lh build/libs/calculator.jar
-   ```
-
-   Expect `BUILD SUCCESSFUL` and the JAR file to be listed.
-
-5. Run the calculator.
-
-   ```bash
-   java -jar build/libs/calculator.jar
-   ```
-
-   Expect the console app to prompt for two numbers.
-
-6. Verify with sample input.
-
-   ```bash
-   printf '2\n3\n' | java -jar build/libs/calculator.jar
-   ```
-
-   Expect Sum `5.0`, Subtract `-1.0`, Multiply `6.0`, and Divide `0.666...`.
-
+1. Installed Java 17 and the tools required by SDKMAN, then installed Gradle and checked that both Java and Gradle were available.
+2. Cloned the Gradle calculator project, loaded the SDKMAN Gradle environment, and opened the project directory containing `build.gradle`.
+3. Ran the Gradle unit tests. The test task completed successfully with no failed tests.
+4. Built the application. Gradle completed successfully and produced `build/libs/calculator.jar`.
+5. Ran the packaged JAR and supplied `2` and `3` as sample inputs. The calculator returned a sum of `5.0`, a difference of `-1.0`, a product of `6.0`, and a quotient of approximately `0.6667`.
 ## Result
 
-The Gradle tests and build passed, and the packaged calculator produced the expected results.
+The Gradle tests and build passed, and the calculator returned the expected results.
 
 ![Gradle test results](./screenshots/03-unit-tests.png)
-*Proves the Gradle tests passed.*
+*Shows the Gradle tests passing.*
 
 ![Gradle build result](./screenshots/04-build.png)
-*Proves Gradle built the executable calculator JAR.*
+*Shows Gradle creating the executable calculator JAR.*
 
 ![Gradle calculator output](./screenshots/05-run-and-verify.png)
-*Proves the calculator returned the expected results for 2 and 3.*
-
-## Cleanup
-
-Remove generated output from the project directory.
-
-```bash
-rm -rf build
-```
+*Shows the calculator results for inputs 2 and 3.*

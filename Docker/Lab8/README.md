@@ -1,73 +1,114 @@
-# Lab 8: Node.js and MySQL with Docker Compose
+# Lab 8: Containerized Node.js and MySQL Stack Using Docker Compose
 
-**Goal:** Run the Node.js app with MySQL using Compose, health-gated startup, and persistent database and application log volumes.
+**Goal:** Run the Node.js application with MySQL through Docker Compose, using a custom network, health-gated startup, and persistent logs and database data.
 
 **Environment:** Ubuntu on WSL 2 with Docker Desktop and Docker Compose (see the [root README](../../README.md)).
 
+**Source application:** [iVolveApp on GitHub](https://github.com/Ibrahim-Adel15/iVolveApp).
+
+## Dockerfile Used
+
+```dockerfile
+FROM node:22-alpine
+
+ENV NODE_ENV=production
+WORKDIR /app
+COPY package.json ./
+RUN npm install --omit=dev && npm cache clean --force
+COPY --chown=node:node . .
+RUN mkdir -p /app/logs && chown -R node:node /app
+USER node
+EXPOSE 3000
+CMD ["node", "server.js"]
+```
+
+## Compose File Used
+
+```yaml
+services:
+  app:
+    build: .
+    image: ${DOCKERHUB_USERNAME:-your-dockerhub-username}/ivolve-app:latest
+    ports:
+      - "3000:3000"
+    environment:
+      DB_HOST: mysql
+      DB_USER: ivolve
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      DB_NAME: ivolve
+    volumes:
+      - app_logs:/app/logs
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - ivolve-net
+
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+      MYSQL_DATABASE: ivolve
+      MYSQL_USER: ivolve
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$${MYSQL_ROOT_PASSWORD}\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    networks:
+      - ivolve-net
+
+networks:
+  ivolve-net:
+    name: ivolve-net
+    driver: bridge
+
+volumes:
+  app_logs:
+  db_data:
+    name: db_data
+```
+
+The local `.env` file is created from `.env.example` and kept out of Git. It supplies values for these settings:
+
+| Variable | Used by |
+| --- | --- |
+| `DOCKERHUB_USERNAME` | App image tag |
+| `MYSQL_ROOT_PASSWORD` | MySQL root account |
+| `DB_PASSWORD` | MySQL app user and Node app connection |
+
 ## Steps
 
-### Part 1: Configure the Compose stack
+### Part 1: Configure and start the stack
 
-1. Enter the application directory and create a local environment file.
+1. Created a local `.env` file from `.env.example` and set the Docker Hub username, MySQL root password, and app database password.
+2. Validated the Compose configuration and started the app and MySQL services.
+3. Confirmed that MySQL became healthy before the app started. The app and database communicate over the custom bridge network `ivolve-net`.
 
-   ```bash
-   cd "Docker/Lab8/app"
-   cp .env.example .env
-   ```
+### Part 2: Verify the app and database
 
-   Edit `.env` and replace `DOCKERHUB_USERNAME`, `MYSQL_ROOT_PASSWORD`, and `DB_PASSWORD` with your own values. Do not commit this file.
+4. Checked the app page, health endpoint, products API, and service logs.
+5. Confirmed that the health endpoint connected to MySQL and that the products API returned the three seeded rows from the `ivolve.products` table.
+6. Verified that the app runs as the non-root `node` user and that its `/app/logs` directory is backed by the `app_logs` volume. The MySQL data directory is backed by `db_data`.
 
-### Part 2: Start and verify the services
+### Part 3: Prepare the Docker Hub image
 
-2. Validate the Compose configuration and start the services.
-
-   ```bash
-   docker compose config --quiet
-   docker compose up --build -d
-   docker compose ps
-   ```
-
-   Expect both services to start, with MySQL passing its health check before the app starts.
-
-3. Verify the site, database connection, and product data.
-
-   ```bash
-   curl http://localhost:3000/
-   curl http://localhost:3000/health
-   curl http://localhost:3000/api/products
-   docker compose logs app mysql
-   ```
-
-   Expect the site to load, `/health` to confirm its MySQL connection, and `/api/products` to return the three seeded products.
-
-### Part 3: Publish the app image
-
-4. Build and push the app image when you are ready to publish it.
-
-   ```bash
-   docker login
-   docker compose build app
-   docker compose push app
-   ```
-
-   Expect the image to use the Docker Hub username configured in `.env`. This lab was verified locally; no image was pushed.
-
-The Compose stack uses network `ivolve-net`, volume `db_data` for MySQL files, and volume `app_logs` for app logs at `/app/logs`. The app runs as the non-root `node` user.
+7. Configured the app image tag as `DOCKERHUB_USERNAME/ivolve-app:latest` and built it locally.
+8. Pushed the image to Docker Hub as [`adaghash/ivolve-app:latest`](https://hub.docker.com/r/adaghash/ivolve-app/tags).
 
 ## Result
 
-MySQL became healthy, the app connected successfully, and `/api/products` returned three rows from `ivolve.products`.
-
-<!-- Screenshot placeholder: healthy Compose services -->
-<!-- Screenshot placeholder: app page and product API response -->
-<!-- Screenshot placeholder: persisted application log volume -->
-
-## Cleanup
-
-Stop and remove the Compose services and network:
-
-```bash
-docker compose down
-```
-
-The database and log volumes are preserved. Add `-v` only when you intentionally want Compose to remove those persistent volumes too.
+| Requirement | Implementation / observed result |
+| --- | --- |
+| App port | Host `3000` to container `3000` |
+| Database | MySQL 8.4, database `ivolve`, service name `mysql` |
+| Service network | Custom bridge network `ivolve-net` |
+| Database persistence | `db_data:/var/lib/mysql` |
+| App log persistence | `app_logs:/app/logs` |
+| Startup order | App waits for the MySQL health check |
+| App verification | Health endpoint connected; products API returned three seeded products |
+| Registry publish | `adaghash/ivolve-app:latest` pushed successfully |

@@ -1,69 +1,80 @@
-# Lab 6: Environment Variables and Resource Management
+# Lab 6: Docker Environment Variables and Resource Management
 
-**Goal:** Run the Flask app with runtime variables, an environment file, and Dockerfile defaults, then inspect CPU and memory limits.
+**Goal:** Configure a Flask application using runtime variables, an environment file, and Dockerfile defaults, while limiting and monitoring container resources.
 
 **Environment:** Ubuntu on WSL 2 with Docker Desktop (see the [root README](../../README.md)).
 
+**Source application:** [PythonApp on GitHub](https://github.com/Ibrahim-Adel15/PythonApp).
+
+## Dockerfiles and Environment File
+
+The common Dockerfile used for the runtime-variable and environment-file runs:
+
+```dockerfile
+FROM python:3.12-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY app.py .
+EXPOSE 5000
+CMD ["python", "app.py"]
+```
+
+The second Dockerfile sets development defaults in the image:
+
+```dockerfile
+FROM python:3.12-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY app.py .
+ENV APP_NAME=iVolveApp3 \
+    APP_ENV=dev
+EXPOSE 5000
+CMD ["python", "app.py"]
+```
+
+The `env.txt` file used for the environment-file run:
+
+```dotenv
+APP_NAME=iVolveApp2
+APP_ENV=prod
+```
+
 ## Steps
 
-### Part 1: Set runtime variables and resource limits
+### Part 1: Build the common image and set runtime variables
 
-1. Enter the application directory and build the common image.
+1. Used the Python 3.12 slim base image, installed the Flask app dependencies, copied in the application, and exposed port 5000.
+2. Built the image as `ivolve1`.
+3. Started `lab6-runtime` with `APP_NAME=iVolveApp1` and `APP_ENV=stg`, limited to one CPU and 256 MB of memory.
+4. Opened the app on host port 5000 and verified that its response contained the configured app name and environment.
+5. Inspected the container environment and monitored its resource usage. The resource configuration was confirmed as one CPU and 256 MiB.
 
-   ```bash
-   cd "Docker/Lab6/app"
-   docker build -t ivolve1 .
-   ```
+Example response:
 
-   Expect Docker to build the Flask application image.
+```json
+{"application":"iVolveApp1","environment":"stg","message":"Welcome to the Docker Env & Resource Management Lab!"}
+```
 
-2. Supply variables when creating the first container and apply resource limits.
+### Part 2: Load values from `env.txt`
 
-   ```bash
-   docker run -d --name lab6-runtime -p 5000:5000 --cpus=1 --memory=256m \
-     -e APP_NAME=iVolveApp1 -e APP_ENV=stg ivolve1
-   curl http://localhost:5000/
-   docker exec lab6-runtime printenv APP_NAME APP_ENV
-   docker inspect --format '{{.HostConfig.NanoCpus}} {{.HostConfig.Memory}}' lab6-runtime
-   docker stats lab6-runtime
-   ```
+6. Started `lab6-env-file` from `ivolve1`, using `env.txt` for its environment.
+7. Verified on a separate host port that the response and container environment contained `iVolveApp2` and `prod`.
 
-   Expect the response to contain `iVolveApp1` and `stg`. The inspect output should show `1000000000 268435456`, corresponding to one CPU and 256 MiB.
+### Part 3: Use Dockerfile defaults
 
-### Part 2: Load variables from an environment file
+8. Built the development image as `ivolve3` from the second Dockerfile and started `lab6-dockerfile-env`.
+9. Verified on a separate host port that the response and container environment contained `iVolveApp3` and `dev`.
 
-3. Load variables from the environment file.
-
-   ```bash
-   docker run -d --name lab6-env-file -p 5001:5000 --env-file env.txt ivolve1
-   curl http://localhost:5001/
-   ```
-
-   Expect the response to contain `iVolveApp2` and `prod`, the values in `env.txt`.
-
-### Part 3: Set defaults in the Dockerfile
-
-4. Build and run the image with Dockerfile defaults.
-
-   ```bash
-   docker build -f Dockerfile.dev -t ivolve3 .
-   docker run -d --name lab6-dockerfile-env -p 5002:5000 ivolve3
-   curl http://localhost:5002/
-   ```
-
-   Expect the response to contain `iVolveApp3` and `dev`.
+The PDF reuses `container2` and host port 5000 for the last two runs. This lab used distinct container names and host ports 5000, 5001, and 5002 so all three configurations could run without collisions; each host port maps to the app's port 5000.
 
 ## Result
 
-The three configurations returned `iVolveApp1/stg`, `iVolveApp2/prod`, and `iVolveApp3/dev`. The first container had a one-CPU limit and a 256 MiB memory limit.
+| Container | Image | Configuration source | App name | Environment | Host port |
+| --- | --- | --- | --- | --- | ---: |
+| `lab6-runtime` | `ivolve1` | Runtime environment variables | `iVolveApp1` | `stg` | 5000 |
+| `lab6-env-file` | `ivolve1` | `env.txt` | `iVolveApp2` | `prod` | 5001 |
+| `lab6-dockerfile-env` | `ivolve3` | Dockerfile defaults | `iVolveApp3` | `dev` | 5002 |
 
-<!-- Screenshot placeholder: responses showing all three environment configurations -->
-<!-- Screenshot placeholder: resource limits for lab6-runtime -->
-
-## Cleanup
-
-Remove the containers created in these steps when you no longer need them:
-
-```bash
-docker rm -f lab6-runtime lab6-env-file lab6-dockerfile-env
-```
+The application returned the expected configuration in all three runs. The first container was limited to one CPU and 256 MiB of memory.
