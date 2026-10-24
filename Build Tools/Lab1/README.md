@@ -1,27 +1,92 @@
-# Lab 1: Building and Packaging a Java Application with Maven
+# Lab 1 — Building and Packaging a Java Application with Maven
 
-**Goal:** Test, package, and run the Java calculator with Maven.
+## Overview
+
+This lab builds and tests a Java console calculator with Maven, packages it as an executable JAR, and runs it with sample inputs.
 
 **Environment:** Ubuntu on WSL 2 with Java 17 and Maven (see the [root README](../../README.md)).
 
-**Source application:** [CalculatorMavenApp on GitHub](https://github.com/Ibrahim-Adel15/CalculatorMavenApp).
+**Objectives**
 
-## Steps
+- Run the calculator unit tests with Maven.
+- Package the application as an executable JAR.
+- Run the JAR and verify its arithmetic output.
 
-1. Installed Java 17, Maven, and Git, then checked that Java and Maven were available in the Ubuntu environment.
-2. Cloned the Maven calculator project and opened the project directory containing its `pom.xml`.
-3. Ran the Maven unit tests. All five tests passed.
-4. Packaged the application. Maven completed successfully and produced `target/calculator.jar`.
-5. Ran the packaged JAR and supplied `2` and `3` as sample inputs. The calculator returned a sum of `5.0`, a difference of `-1.0`, a product of `6.0`, and a quotient of approximately `0.6667`.
-## Result
+## Architecture
 
-The Maven tests passed, the executable JAR was created, and the calculator returned the expected results.
+| Component | Responsibility |
+| --- | --- |
+| `Main` | Reads two numbers and prints each operation |
+| `Calculator` | Implements arithmetic operations |
+| Maven | Runs tests and packages the executable JAR |
 
-![Maven test results](./screenshots/03-unit-tests.png)
-*Shows all five Maven tests passing.*
+### Request flow
 
-![Maven package result](./screenshots/04-package.png)
-*Shows Maven packaging the calculator JAR successfully.*
+1. The user enters two numbers in the console.
+2. `Main` calls the calculator operations.
+3. The results are printed to the console.
 
-![Maven calculator output](./screenshots/05-run-and-verify.png)
-*Shows the calculator results for inputs 2 and 3.*
+```text
+Console input -> Main -> Calculator -> Console output
+```
+
+## Project Structure
+
+```text
+Lab1/
+├── README.md
+├── screenshots/                 # Optional visual evidence
+└── app/
+    └── CalculatorMavenApp/
+        ├── pom.xml
+        └── src/
+```
+
+## Implementation
+
+### 1. Run the Unit Tests
+
+From the lab root, change to the Maven project and run its tests:
+
+```bash
+cd app/CalculatorMavenApp
+mvn test
+```
+
+### 2. Package the Application
+
+```bash
+mvn package
+```
+
+Maven creates the executable `target/calculator.jar`.
+
+### 3. Run the Calculator
+
+```bash
+java -jar target/calculator.jar
+```
+
+When prompted, enter `2` and `3`.
+
+## Verification
+
+Confirm all five tests pass and that the calculator reports sum `5.0`, difference `-1.0`, product `6.0`, and quotient approximately `0.6667`.
+
+<!-- Screenshot: Maven test results showing all five tests passing -->
+<!-- Screenshot: Maven packaging the calculator JAR -->
+<!-- Screenshot: Calculator output for inputs 2 and 3 -->
+
+## Cleanup
+
+Remove generated Maven build output when it is no longer needed:
+
+```bash
+rm -rf target
+```
+
+## Key Takeaways
+
+- Maven can run tests and package an executable Java application.
+- The packaged JAR can be verified independently of the Maven build command.
+- Sample inputs and expected outputs provide a quick functional check.

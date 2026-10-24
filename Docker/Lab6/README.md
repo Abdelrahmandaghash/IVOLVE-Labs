@@ -1,80 +1,109 @@
-# Lab 6: Docker Environment Variables and Resource Management
+# Lab 6 — Docker Environment Variables and Resource Management
 
-**Goal:** Configure a Flask application using runtime variables, an environment file, and Dockerfile defaults, while limiting and monitoring container resources.
+## Overview
+
+This lab configures a Flask application using runtime environment variables, an environment file, and Dockerfile defaults, then limits and monitors container resources.
 
 **Environment:** Ubuntu on WSL 2 with Docker Desktop (see the [root README](../../README.md)).
 
 **Source application:** [PythonApp on GitHub](https://github.com/Ibrahim-Adel15/PythonApp).
 
-## Dockerfiles and Environment File
+**Objectives**
 
-The common Dockerfile used for the runtime-variable and environment-file runs:
+- Configure app settings from multiple environment-variable sources.
+- Apply CPU and memory limits to a container.
+- Inspect the running container's resource usage and configuration.
 
-```dockerfile
-FROM python:3.12-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY app.py .
-EXPOSE 5000
-CMD ["python", "app.py"]
+## Architecture
+
+| Container | Configuration source | App name | Environment | Host port |
+| --- | --- | --- | --- | ---: |
+| `lab6-runtime` | Runtime variables | `iVolveApp1` | `stg` | 5000 |
+| `lab6-env-file` | `app/env.txt` | `iVolveApp2` | `prod` | 5001 |
+| `lab6-dockerfile-env` | Dockerfile defaults | `iVolveApp3` | `dev` | 5002 |
+
+### Request flow
+
+1. A browser or HTTP client requests the Flask app on the selected host port.
+2. Docker forwards the request to port 5000 in the container.
+3. The app returns its configured application name and environment.
+
+## Project Structure
+
+```text
+Lab6/
+├── README.md
+├── screenshots/                 # Optional visual evidence
+└── app/
+    ├── Dockerfile
+    ├── Dockerfile.dev
+    ├── app.py
+    ├── env.txt
+    └── requirements.txt
 ```
 
-The second Dockerfile sets development defaults in the image:
+The default Dockerfile installs the Python dependencies and application. `Dockerfile.dev` sets `APP_NAME=iVolveApp3` and `APP_ENV=dev`. `env.txt` contains `APP_NAME=iVolveApp2` and `APP_ENV=prod`.
 
-```dockerfile
-FROM python:3.12-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY app.py .
-ENV APP_NAME=iVolveApp3 \
-    APP_ENV=dev
-EXPOSE 5000
-CMD ["python", "app.py"]
+## Implementation
+
+### 1. Build the Common Image
+
+Run from the lab root:
+
+```bash
+docker build -t ivolve1 app
 ```
 
-The `env.txt` file used for the environment-file run:
+### 2. Start with Runtime Variables and Resource Limits
 
-```dotenv
-APP_NAME=iVolveApp2
-APP_ENV=prod
+```bash
+docker run -d --name lab6-runtime -p 5000:5000 \
+  --cpus=1 --memory=256m \
+  -e APP_NAME=iVolveApp1 -e APP_ENV=stg ivolve1
 ```
 
-## Steps
+### 3. Start with an Environment File
 
-### Part 1: Build the common image and set runtime variables
-
-1. Used the Python 3.12 slim base image, installed the Flask app dependencies, copied in the application, and exposed port 5000.
-2. Built the image as `ivolve1`.
-3. Started `lab6-runtime` with `APP_NAME=iVolveApp1` and `APP_ENV=stg`, limited to one CPU and 256 MB of memory.
-4. Opened the app on host port 5000 and verified that its response contained the configured app name and environment.
-5. Inspected the container environment and monitored its resource usage. The resource configuration was confirmed as one CPU and 256 MiB.
-
-Example response:
-
-```json
-{"application":"iVolveApp1","environment":"stg","message":"Welcome to the Docker Env & Resource Management Lab!"}
+```bash
+docker run -d --name lab6-env-file -p 5001:5000 \
+  --env-file app/env.txt ivolve1
 ```
 
-### Part 2: Load values from `env.txt`
+### 4. Build and Start with Dockerfile Defaults
 
-6. Started `lab6-env-file` from `ivolve1`, using `env.txt` for its environment.
-7. Verified on a separate host port that the response and container environment contained `iVolveApp2` and `prod`.
+```bash
+docker build -f app/Dockerfile.dev -t ivolve3 app
+docker run -d --name lab6-dockerfile-env -p 5002:5000 ivolve3
+```
 
-### Part 3: Use Dockerfile defaults
+## Verification
 
-8. Built the development image as `ivolve3` from the second Dockerfile and started `lab6-dockerfile-env`.
-9. Verified on a separate host port that the response and container environment contained `iVolveApp3` and `dev`.
+Check each app response and inspect the resource-limited container:
 
-The PDF reuses `container2` and host port 5000 for the last two runs. This lab used distinct container names and host ports 5000, 5001, and 5002 so all three configurations could run without collisions; each host port maps to the app's port 5000.
+```bash
+curl http://localhost:5000/
+curl http://localhost:5001/
+curl http://localhost:5002/
+docker inspect lab6-runtime --format '{{.HostConfig.NanoCpus}} {{.HostConfig.Memory}}'
+docker stats --no-stream lab6-runtime
+```
 
-## Result
+The responses should identify, respectively, `iVolveApp1`/`stg`, `iVolveApp2`/`prod`, and `iVolveApp3`/`dev`. The first container is limited to one CPU and 256 MiB of memory.
 
-| Container | Image | Configuration source | App name | Environment | Host port |
-| --- | --- | --- | --- | --- | ---: |
-| `lab6-runtime` | `ivolve1` | Runtime environment variables | `iVolveApp1` | `stg` | 5000 |
-| `lab6-env-file` | `ivolve1` | `env.txt` | `iVolveApp2` | `prod` | 5001 |
-| `lab6-dockerfile-env` | `ivolve3` | Dockerfile defaults | `iVolveApp3` | `dev` | 5002 |
+<!-- Screenshot: Runtime-variable response and CPU/memory limits -->
+<!-- Screenshot: Environment-file and Dockerfile-default responses -->
 
-The application returned the expected configuration in all three runs. The first container was limited to one CPU and 256 MiB of memory.
+## Cleanup
+
+Remove only the lab containers and images:
+
+```bash
+docker rm -f lab6-runtime lab6-env-file lab6-dockerfile-env
+docker rmi ivolve1 ivolve3
+```
+
+## Key Takeaways
+
+- Runtime variables, environment files, and Dockerfile defaults can configure containerized apps.
+- Resource limits can be set when a container is started.
+- `docker inspect` and `docker stats` help verify resource settings and usage.

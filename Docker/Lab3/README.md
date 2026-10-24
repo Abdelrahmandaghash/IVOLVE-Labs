@@ -1,88 +1,110 @@
-# Lab 3: Creating and Comparing Docker Images for a Java Application
+# Lab 3 — Creating and Comparing Docker Images for a Java Application
 
-**Goal:** Build and compare the calculator image built inside Docker with an image built locally.
+## Overview
+
+This lab builds the same Java calculator two ways: compile it inside a Docker build, then compare that image with a runtime image assembled from a JAR built locally.
 
 **Environment:** Ubuntu on WSL 2 with Java 17, Maven, and Docker Desktop (see the [root README](../../README.md)).
 
 **Source application:** [CalculatorMavenApp on GitHub](https://github.com/Ibrahim-Adel15/CalculatorMavenApp).
 
-## Part 1: Build the application inside Docker
+**Objectives**
 
-The first image uses Maven and Java 17 to compile the source and run the resulting JAR. The Dockerfile creates a non-root user and runs the application as that user.
+- Build and run an image that compiles the app inside Docker.
+- Build and run an image that uses a locally built JAR.
+- Compare image sizes and calculator output.
 
-```dockerfile
-FROM maven:3.9-eclipse-temurin-17
+## Architecture
 
-RUN useradd -m appuser
-ENV MAVEN_CONFIG=/home/appuser/.m2
-WORKDIR /app
-RUN chown appuser:appuser /app
+| Image | Build approach | Runtime contents |
+| --- | --- | --- |
+| `app1` | Maven compiles the source during image build | Maven/Java image and calculator |
+| `app2` | Maven builds on the host before Docker build | Java 17 JRE and calculator JAR |
 
-COPY --chown=appuser:appuser . .
-USER appuser
-RUN mvn package
+### Request flow
 
-EXPOSE 8080
-CMD ["java", "-jar", "target/calculator.jar"]
+1. The user provides two values to the interactive calculator container.
+2. The calculator performs the arithmetic operations.
+3. The results are printed to the container terminal.
+
+## Project Structure
+
+```text
+Lab3/
+├── README.md
+├── screenshots/                 # Optional visual evidence
+└── app/
+    ├── part1-build-inside-docker/
+    └── part2-build-locally/
 ```
 
-1. Used the Part 1 build context, where this Dockerfile and the calculator source are available.
-2. Built the image and tagged it `app1`.
-3. Checked the local image listing and recorded the image size as **814 MB**.
-4. Started `container1` with interactive input and entered `2` and `3`. The calculator printed the expected arithmetic results.
-5. Checked the container logs to confirm the application output.
+Each part is a separate Docker build context containing its Dockerfile and calculator project files.
 
-## Part 2: Build the application locally
+## Implementation
 
-The second image contains only a Java 17 JRE and the JAR built by Maven on the host. It also runs as a non-root user.
+### 1. Build the Application Inside Docker
 
-```dockerfile
-FROM eclipse-temurin:17-jre
+Run from the lab root. The Dockerfile builds with Maven and Java 17 and runs as the non-root `appuser`.
 
-RUN useradd -m appuser
-WORKDIR /app
-
-COPY --chown=appuser:appuser target/calculator.jar app.jar
-USER appuser
-
-EXPOSE 8080
-CMD ["java", "-jar", "app.jar"]
+```bash
+docker build -t app1 ./app/part1-build-inside-docker
+docker images app1
+docker run -it --name container1 app1
 ```
 
-1. Ran the Maven tests and packaged the calculator locally in the Part 2 project directory.
-2. Built the image and tagged it `app2`.
-3. Checked the local image listing and recorded the image size as **427 MB**.
-4. Started `container2` with interactive input and entered `2` and `3`. The calculator printed the same results as in Part 1.
-5. Checked the container logs and removed the lab containers and images after verifying both approaches.
+Enter `2` and `3` when prompted.
 
-## Result
+### 2. Build the Application Locally
 
-Both images ran the calculator successfully. The locally built image was smaller because it contains the JRE and application JAR, not Maven, the JDK, source code, or the Maven build cache.
+The second Dockerfile copies `target/calculator.jar` into a Java 17 JRE image. Build from that project directory:
 
-| Image | Build approach | Measured size |
+```bash
+cd app/part2-build-locally
+mvn test
+mvn package
+docker build -t app2 .
+docker images app2
+docker run -it --name container2 app2
+```
+
+Enter `2` and `3` when prompted.
+
+## Verification
+
+Check the container output and recorded image sizes:
+
+```bash
+docker logs container1
+docker logs container2
+docker image inspect app1 --format '{{.Size}}'
+docker image inspect app2 --format '{{.Size}}'
+```
+
+Both images should produce sum `5.0`, difference `-1.0`, product `6.0`, and quotient approximately `0.6667`.
+
+| Image | Build approach | Recorded size |
 | --- | --- | ---: |
 | `app1` | Maven build inside a Maven/Java image | 814 MB |
 | `app2` | Local Maven build, JAR copied into a JRE image | 427 MB |
 
-Building inside Docker avoids relying on the host build environment and is more reproducible. Building locally produces the smaller runtime image, with fewer build tools and a smaller attack surface.
+The JRE image is smaller because it excludes Maven, the JDK, source code, and the Maven build cache.
 
-![Part 1 Docker build](./screenshots/03-part1-image-build.png)
-*Shows the Part 1 image build.*
+<!-- Screenshot: Part 1 image build and image size -->
+<!-- Screenshot: Part 1 container calculator output -->
+<!-- Screenshot: Part 2 Maven package, image size, and container output -->
+<!-- Screenshot: Lab container and image cleanup -->
 
-![Part 1 image size](./screenshots/04-app1-size.png)
-*Shows the measured `app1` image size.*
+## Cleanup
 
-![Part 1 container output](./screenshots/05-container1-run.png)
-*Shows `container1` running the calculator.*
+Remove only this lab's containers and images when finished:
 
-![Part 2 Maven package](./screenshots/07-part2-maven-package.png)
-*Shows the local Maven package step.*
+```bash
+docker rm -f container1 container2
+docker rmi app1 app2
+```
 
-![Part 2 image size](./screenshots/10-app2-size.png)
-*Shows the measured `app2` image size.*
+## Key Takeaways
 
-![Part 2 container output](./screenshots/11-container2-run.png)
-*Shows `container2` running the calculator.*
-
-![Docker cleanup](./screenshots/12-cleanup.png)
-*Shows cleanup of the lab containers and images.*
+- A multi-tool build image can compile the application inside Docker.
+- A JRE-only image can reduce runtime image size when the artifact is built separately.
+- The runtime behavior should be verified in both images before comparing them.

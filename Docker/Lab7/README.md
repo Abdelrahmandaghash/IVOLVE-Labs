@@ -1,77 +1,235 @@
-# Lab 7: Multi-Network Microservices, Volumes, and Bind Mounts
+# Lab 7 — Multi-Network Microservices, Volumes, and Bind Mounts
 
-**Goal:** Build three services, connect them through two isolated bridge networks, and persist service logs and backend message data.
+## Overview
+
+This lab runs a frontend, backend, and notification service in Docker containers connected through isolated bridge networks. A bind mount preserves backend messages, and named volumes preserve service logs.
 
 **Environment:** Ubuntu on WSL 2 with Docker Desktop (see the [root README](../../README.md)).
 
 **Source application:** [MicroserviceApp on GitHub](https://github.com/Ibrahim-Adel15/MicroserviceApp).
 
-## Dockerfiles Used
+**Objectives**
 
-Frontend:
+- Build Docker images for three services.
+- Configure two bridge networks with separate subnets.
+- Connect the backend to both networks.
+- Persist backend data using a bind mount.
+- Persist service logs using named volumes.
+- Verify service communication, isolation, and persistence.
 
-```dockerfile
-FROM python:3.12-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY app.py .
-EXPOSE 3000
-CMD ["python", "app.py"]
+## Architecture
+
+| Service | Container port | Network | Responsibility |
+| --- | ---: | --- | --- |
+| Frontend | 3000 | `frontend-backend` | Web interface |
+| Backend | 5000 | Both networks | Processes and stores messages |
+| Notification | 5001 | `backend-notification` | Receives notifications |
+
+### Request flow
+
+1. The browser accesses the frontend through host port `8080`.
+2. The frontend sends requests to the backend.
+3. The backend stores messages and sends notifications.
+4. The notification service records received notifications.
+
+The frontend cannot directly resolve the notification service because it is not connected to `backend-notification`.
+
+```mermaid
+flowchart LR
+    Browser["Browser :8080"]
+    Frontend["Frontend :3000"]
+    Backend["Backend :5000"]
+    Notification["Notification :5001"]
+
+    Browser --> Frontend
+    subgraph Network1["frontend-backend"]
+        Frontend
+        Backend
+    end
+    subgraph Network2["backend-notification"]
+        Backend
+        Notification
+    end
 ```
 
-Backend:
+## Project Structure
 
-```dockerfile
-FROM python:3.12-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY app.py .
-RUN mkdir -p /app/data /app/logs
-EXPOSE 5000
-CMD ["python", "app.py"]
+```text
+Lab7/
+├── README.md
+├── screenshots/                 # Optional visual evidence
+└── app/
+    ├── backend/
+    │   ├── Dockerfile
+    │   ├── app.py
+    │   └── requirements.txt
+    ├── data/
+    ├── frontend/
+    │   ├── Dockerfile
+    │   ├── app.py
+    │   └── requirements.txt
+    └── notification/
+        ├── Dockerfile
+        ├── app.py
+        └── requirements.txt
 ```
 
-Notification service:
+## Implementation
 
-```dockerfile
-FROM python:3.12-slim
-WORKDIR /app
-COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
-COPY app.py .
-RUN mkdir -p /app/logs
-EXPOSE 5001
-CMD ["python", "app.py"]
+### 1. Build the Docker Images
+
+Run from the lab root:
+
+```bash
+docker build -t lab7-frontend ./app/frontend
+docker build -t lab7-backend ./app/backend
+docker build -t lab7-notification ./app/notification
+docker images lab7-frontend lab7-backend lab7-notification
 ```
 
-## Steps
+### 2. Create the Bridge Networks
 
-### Part 1: Build the service images
+Create two separate bridge networks. These are the subnets used for this lab:
 
-1. Built separate images for the frontend, backend, and notification services: `lab7-frontend`, `lab7-backend`, and `lab7-notification`.
+```bash
+docker network create --driver bridge --subnet 172.28.0.0/16 frontend-backend
+docker network create --driver bridge --subnet 172.29.0.0/16 backend-notification
+docker network inspect frontend-backend backend-notification \
+  --format '{{.Name}} -> {{(index .IPAM.Config 0).Subnet}}'
+```
 
-### Part 2: Create networks and persistent storage
+User-defined bridge networks provide container-name DNS resolution between containers attached to the same network.
 
-2. Created the `frontend-backend` bridge network with subnet `172.28.0.0/16`.
-3. Created the `backend-notification` bridge network with subnet `172.29.0.0/16`.
-4. Created the `backend-logs` and `notification-logs` Docker volumes and a host `data/` directory for backend message data.
+### 3. Create Persistent Storage
 
-### Part 3: Start the services in the required network topology
+```bash
+docker volume create backend-logs
+docker volume create notification-logs
+mkdir -p app/data
+```
 
-5. Started the notification service on `backend-notification` and mounted `notification-logs` at `/app/logs`.
-6. Started the backend on `backend-notification`, configured its notification URL as `http://notification:5001/notify`, and mounted `backend-logs` at `/app/logs`.
-7. Connected the backend to `frontend-backend` as well, so it could communicate with both the frontend and notification service. Bind-mounted the host `data/` directory to `/app/data`.
-8. Started the frontend on `frontend-backend`, configured its backend URL as `http://backend:5000`, and published the frontend on host port 8080.
-9. Opened the frontend, submitted a message, and refreshed the page. Verified that the backend returned the message and stored it in `/app/data/messages.json`; checked that backend and notification logs were available in their mounted paths.
+| Storage | Type | Container mount |
+| --- | --- | --- |
+| `backend-logs` | Named volume | `/app/logs` |
+| `notification-logs` | Named volume | `/app/logs` |
+| `app/data/` | Bind mount | `/app/data` |
 
-## Result
+### 4. Start the Notification Service
 
-The frontend, backend, and notification service communicated over the intended isolated networks. A submitted message could be retrieved from the backend, persisted in the host-mounted data directory, and confirmed in the notification log.
+```bash
+docker run -d \
+  --name notification \
+  --network backend-notification \
+  -v notification-logs:/app/logs \
+  lab7-notification
+```
 
-| Service | Network(s) | Published port | Persistent mount |
-| --- | --- | ---: | --- |
-| Frontend | `frontend-backend` | `8080:3000` | — |
-| Backend | `frontend-backend`, `backend-notification` | `5000:5000` | `backend-logs:/app/logs`, host `data/` to `/app/data` |
-| Notification | `backend-notification` | — | `notification-logs:/app/logs` |
+### 5. Start the Backend
+
+Start the backend on `backend-notification`, configure the notification URL, and connect it to the frontend network:
+
+```bash
+docker run -d \
+  --name backend \
+  --network backend-notification \
+  -e NOTIFICATION_URL=http://notification:5001/notify \
+  -v backend-logs:/app/logs \
+  -v "$PWD/app/data:/app/data" \
+  lab7-backend
+docker network connect frontend-backend backend
+```
+
+The backend is attached to both networks so it can communicate with the frontend and notification service.
+
+### 6. Start the Frontend
+
+```bash
+docker run -d \
+  --name frontend \
+  --network frontend-backend \
+  -p 8080:3000 \
+  -e BACKEND_URL=http://backend:5000 \
+  lab7-frontend
+docker ps
+docker network inspect frontend-backend backend-notification \
+  --format '{{.Name}}: {{range .Containers}}{{.Name}} {{end}}'
+```
+
+## Verification
+
+### 7. Test the Application
+
+Open <http://localhost:8080>, create a few test messages, and verify they appear in the application.
+
+### 8. Verify Data and Logs
+
+```bash
+cat app/data/messages.json
+docker exec backend tail -n 10 /app/logs/backend.log
+docker exec notification tail -n 10 /app/logs/notification.log
+```
+
+The message data should be visible in the host directory, while the named volumes store the service logs.
+
+### 9. Verify Network Isolation
+
+The backend should reach the notification service:
+
+```bash
+docker exec backend python -c \
+  "import urllib.request as u; print(u.urlopen('http://notification:5001/health', timeout=3).read())"
+```
+
+The frontend should fail to resolve the notification service because it is not connected to `backend-notification`:
+
+```bash
+docker exec frontend python -c \
+  "import urllib.request as u; print(u.urlopen('http://notification:5001/health', timeout=3).read())"
+```
+
+### 10. Verify Persistence
+
+After creating messages, recreate the backend container using the same bind mount and named volume, then reconnect it to both networks:
+
+```bash
+docker rm -f backend
+docker run -d \
+  --name backend \
+  --network backend-notification \
+  -e NOTIFICATION_URL=http://notification:5001/notify \
+  -v backend-logs:/app/logs \
+  -v "$PWD/app/data:/app/data" \
+  lab7-backend
+docker network connect frontend-backend backend
+```
+
+Verify that messages remain available at <http://localhost:8080> and existing log entries are preserved. Do not remove `app/data/` or either named volume during this test.
+
+<!-- Screenshot: Successfully built Docker images -->
+<!-- Screenshot: Docker volumes and backend data directory -->
+<!-- Screenshot: Running containers and network membership -->
+<!-- Screenshot: Application running with successfully created messages -->
+<!-- Screenshot: Persistent backend data and service logs -->
+<!-- Screenshot: Network isolation and backend connectivity verification -->
+
+## Cleanup
+
+Remove only this lab's containers and resources:
+
+```bash
+docker rm -f frontend backend notification
+docker network rm frontend-backend backend-notification
+docker volume rm backend-logs notification-logs
+docker rmi lab7-frontend lab7-backend lab7-notification
+```
+
+Keep `app/data/` if you want to preserve the messages stored on the host.
+
+## Key Takeaways
+
+- User-defined bridge networks provide container-name DNS resolution.
+- Separate networks can restrict direct communication between services.
+- A container can connect to multiple networks when required.
+- Named volumes preserve data independently of container lifecycle.
+- Bind mounts expose host directories inside containers.
+- Verification commands help confirm connectivity, storage, and persistence.

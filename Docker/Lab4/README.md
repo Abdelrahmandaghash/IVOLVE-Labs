@@ -1,78 +1,117 @@
-# Lab 4: Docker Image Optimization and Export/Load
+# Lab 4 — Docker Image Optimization and Export/Load
 
-**Goal:** Compare the provided Spring Boot image with a smaller multi-stage image, verify non-root execution, and save and restore the optimized image.
+## Overview
+
+This lab compares the supplied Spring Boot image with a multi-stage optimized image, verifies non-root execution, and saves and restores the optimized image.
 
 **Environment:** Ubuntu on WSL 2 with Docker Desktop (see the [root README](../../README.md)).
 
 **Source application:** [ImageOptimization- on GitHub](https://github.com/Ibrahim-Adel15/ImageOptimization-).
 
-## Dockerfiles Used
+**Objectives**
 
-The original single-stage Dockerfile builds and runs the application in the Maven image:
+- Compare single-stage and multi-stage Docker images.
+- Verify that the optimized image runs as a non-root user.
+- Save, remove, and restore the optimized image.
 
-```dockerfile
-FROM maven:3.9.15-eclipse-temurin-17-alpine
+## Architecture
 
-WORKDIR /app
-COPY . .
-RUN mvn package
+| Image | Build/runtime approach | Runtime identity |
+| --- | --- | --- |
+| `image1` | Maven build and application runtime in one image | Default image user |
+| `image2` | Maven build stage plus JRE runtime stage | Non-root `app` user |
 
-EXPOSE 8080
-CMD ["java", "-jar", "target/demo-0.0.1-SNAPSHOT.jar"]
+### Request flow
+
+1. A client makes an HTTP request to the Spring Boot app on port 8080.
+2. The app responds with `Hello from Dockerized Spring Boot!`.
+
+## Project Structure
+
+```text
+Lab4/
+├── README.md
+├── screenshots/                 # Optional visual evidence
+└── app/
+    ├── Dockerfile                # Multi-stage optimized image
+    ├── Dockerfile.original       # Original single-stage image
+    ├── pom.xml
+    └── src/
 ```
 
-The optimized Dockerfile compiles in a build stage, then copies only the JAR into a Java runtime image. The final container runs as the non-root `app` user:
+Both images use `app/` as their build context.
 
-```dockerfile
-FROM maven:3.9.15-eclipse-temurin-17-alpine AS build
-WORKDIR /build
-COPY pom.xml .
-COPY src ./src
-RUN mvn -B -DskipTests package
+## Implementation
 
-FROM eclipse-temurin:17-jre-alpine
-RUN addgroup -S app && adduser -S -G app app
-WORKDIR /app
-COPY --from=build --chown=app:app /build/target/demo-0.0.1-SNAPSHOT.jar app.jar
-USER app
-EXPOSE 8080
-ENTRYPOINT ["java", "-jar", "app.jar"]
+### 1. Build the Original Image
+
+From the lab root:
+
+```bash
+docker build -f app/Dockerfile.original -t image1 app
+docker image inspect image1 --format '{{.Size}}'
 ```
 
-## Steps
+### 2. Build the Optimized Image
 
-### Part 1: Build and verify the original image
+```bash
+docker build -t image2 app
+docker image inspect image2 --format '{{.Size}}'
+```
 
-1. Used the supplied Spring Boot application and original Dockerfile in the lab app directory.
-2. Built the image as `image1` and checked its local image size. The measured size was **671 MB**.
-3. Started a container named `container1` and checked the application at port 8080. It returned `Hello from Dockerized Spring Boot!`.
-4. Stopped and removed `container1` after the check.
+### 3. Save and Restore the Optimized Image
 
-### Part 2: Build and verify the optimized image
+```bash
+docker save -o lab-image.tar image2
+docker rmi image2
+docker load -i lab-image.tar
+docker image inspect image2
+```
 
-5. Built the multi-stage Dockerfile as `image2` and compared the image sizes. The measured size was **294 MB**, which is 377 MB smaller than `image1`.
-6. Started `container2`, checked that it returned the same application response, and inspected its identity. It ran as `uid=100(app)`, confirming it was not running as root.
-7. Stopped and removed `container2` after verification.
+Keep `lab-image.tar` until the restored image has been verified. This lab uses the required archive name consistently.
 
-### Part 3: Save, remove, and restore the optimized image
+## Verification
 
-8. Saved `image2` to the archive `lab-image.tar`, removed the local image tag, then loaded the archive back into Docker.
-9. Inspected the restored image and confirmed the `image2` tag was available locally.
+Run each image and check its response:
 
-The PDF names `lab-image.tar` as the required archive but later refers to `image2.tar`. This lab used the required `lab-image.tar` name consistently.
+```bash
+docker run -d --name container1 -p 8080:8080 image1
+curl http://localhost:8080/
+docker rm -f container1
 
-## Result
+docker run -d --name container2 -p 8080:8080 image2
+curl http://localhost:8080/
+docker exec container2 id
+docker rm -f container2
+```
 
-| Check | Observed result |
+Both images should return `Hello from Dockerized Spring Boot!`; the optimized container should run as `uid=100(app)`.
+
+| Check | Recorded result |
 | --- | --- |
 | Original image | `image1`, 671 MB |
 | Optimized image | `image2`, 294 MB |
-| Application response | Both images returned `Hello from Dockerized Spring Boot!` |
-| Optimized runtime identity | `uid=100(app)` |
-| Save and restore | `image2` was loaded from `lab-image.tar` |
+| Application response | Both images returned the expected greeting |
+| Runtime identity | Optimized image ran as `uid=100(app)` |
+| Save and restore | `image2` was restored from `lab-image.tar` |
 
-The multi-stage build reduced the image by **377 MB** by leaving Maven, the JDK, and source code out of the runtime image.
+The multi-stage image was 377 MB smaller by excluding build tools and source from the runtime image.
+
+<!-- Screenshot: Original and optimized image sizes -->
+<!-- Screenshot: Application response and optimized non-root identity -->
+<!-- Screenshot: Saving, removing, and restoring image2 -->
 
 ## Cleanup
 
-The images and the `lab-image.tar` archive can be removed after the restored image has been verified and is no longer needed.
+Remove the lab images and archive after verification if they are no longer needed:
+
+```bash
+docker rmi image1 image2
+rm lab-image.tar
+```
+
+## Key Takeaways
+
+- Multi-stage builds keep build tooling out of the runtime image.
+- Non-root execution can be checked from inside a running container.
+- `docker save` and `docker load` support transferring image archives.
