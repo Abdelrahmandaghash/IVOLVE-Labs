@@ -42,7 +42,47 @@ Each part is a separate Docker build context containing its Dockerfile and calcu
 
 ## Implementation
 
-### 1. Build the Application Inside Docker
+### 1. Dockerfiles
+
+The Part 1 Dockerfile builds the application in a Maven and Java 17 image and runs it as the non-root `appuser`:
+
+```dockerfile
+# Image with Maven + Java 17
+FROM maven:3.9-eclipse-temurin-17
+
+# Non-root user and a working directory it owns
+RUN useradd -m appuser
+ENV MAVEN_CONFIG=/home/appuser/.m2
+WORKDIR /app
+RUN chown appuser:appuser /app
+
+# Copy the source and build the app
+COPY --chown=appuser:appuser . .
+USER appuser
+RUN mvn package
+
+EXPOSE 8080
+CMD ["java", "-jar", "target/calculator.jar"]
+```
+
+The Part 2 Dockerfile packages the locally built JAR into a Java 17 JRE image:
+
+```dockerfile
+# JRE only, no Maven and no JDK
+FROM eclipse-temurin:17-jre
+
+RUN useradd -m appuser
+WORKDIR /app
+
+# Copy only the JAR built locally
+COPY --chown=appuser:appuser target/calculator.jar app.jar
+USER appuser
+
+EXPOSE 8080
+CMD ["java", "-jar", "app.jar"]
+```
+
+### 2. Build the Application Inside Docker
 
 Run from the lab root. The Dockerfile builds with Maven and Java 17 and runs as the non-root `appuser`.
 
@@ -54,7 +94,7 @@ docker run -it --name container1 app1
 
 Enter `2` and `3` when prompted.
 
-### 2. Build the Application Locally
+### 3. Build the Application Locally
 
 The second Dockerfile copies `target/calculator.jar` into a Java 17 JRE image. Build from that project directory:
 

@@ -49,7 +49,25 @@ Lab8/
 
 ## Implementation
 
-### 1. Configure Environment Variables
+### 1. Application Dockerfile
+
+The Dockerfile installs production dependencies, copies the application, creates the log directory, and runs the service as the non-root `node` user:
+
+```dockerfile
+FROM node:22-alpine
+
+ENV NODE_ENV=production
+WORKDIR /app
+COPY package.json ./
+RUN npm install --omit=dev && npm cache clean --force
+COPY --chown=node:node . .
+RUN mkdir -p /app/logs && chown -R node:node /app
+USER node
+EXPOSE 3000
+CMD ["node", "server.js"]
+```
+
+### 2. Configure Environment Variables
 
 Create a local `.env` file from `.env.example` and set the values locally. Do not commit the resulting `.env` file.
 
@@ -59,7 +77,7 @@ Create a local `.env` file from `.env.example` and set the values locally. Do no
 | `MYSQL_ROOT_PASSWORD` | MySQL root account |
 | `DB_PASSWORD` | MySQL application user and Node.js connection |
 
-### 2. Validate and Start the Compose Stack
+### 3. Validate and Start the Compose Stack
 
 Run from the lab root:
 
@@ -74,7 +92,7 @@ docker compose ps
 
 Compose requires both database passwords. Wait until MySQL is healthy and the app is running.
 
-### 3. Build and Publish the App Image
+### 4. Build and Publish the App Image
 
 The Compose image name uses `DOCKERHUB_USERNAME/ivolve-app:latest`. Authenticate with Docker Hub and set `DOCKERHUB_USERNAME` to the account that owns the target repository before pushing.
 

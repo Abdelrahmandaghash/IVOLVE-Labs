@@ -46,7 +46,35 @@ The default Dockerfile installs the Python dependencies and application. `Docker
 
 ## Implementation
 
-### 1. Build the Common Image
+### 1. Dockerfiles
+
+The common Dockerfile installs the Flask dependencies and app:
+
+```dockerfile
+FROM python:3.12-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY app.py .
+EXPOSE 5000
+CMD ["python", "app.py"]
+```
+
+The development Dockerfile uses the same app image setup and adds default environment values:
+
+```dockerfile
+FROM python:3.12-slim
+WORKDIR /app
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+COPY app.py .
+ENV APP_NAME=iVolveApp3 \
+    APP_ENV=dev
+EXPOSE 5000
+CMD ["python", "app.py"]
+```
+
+### 2. Build the Common Image
 
 Run from the lab root:
 
@@ -54,7 +82,7 @@ Run from the lab root:
 docker build -t ivolve1 app
 ```
 
-### 2. Start with Runtime Variables and Resource Limits
+### 3. Start with Runtime Variables and Resource Limits
 
 ```bash
 docker run -d --name lab6-runtime -p 5000:5000 \
@@ -62,14 +90,14 @@ docker run -d --name lab6-runtime -p 5000:5000 \
   -e APP_NAME=iVolveApp1 -e APP_ENV=stg ivolve1
 ```
 
-### 3. Start with an Environment File
+### 4. Start with an Environment File
 
 ```bash
 docker run -d --name lab6-env-file -p 5001:5000 \
   --env-file app/env.txt ivolve1
 ```
 
-### 4. Build and Start with Dockerfile Defaults
+### 5. Build and Start with Dockerfile Defaults
 
 ```bash
 docker build -f app/Dockerfile.dev -t ivolve3 app

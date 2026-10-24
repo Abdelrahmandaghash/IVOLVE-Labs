@@ -76,7 +76,67 @@ Lab7/
 
 ## Implementation
 
-### 1. Build the Docker Images
+### 1. Dockerfiles
+
+Frontend:
+
+```dockerfile
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY app.py .
+
+EXPOSE 3000
+
+CMD ["python", "app.py"]
+```
+
+Backend:
+
+```dockerfile
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY app.py .
+
+RUN mkdir -p /app/data /app/logs
+
+EXPOSE 5000
+
+CMD ["python", "app.py"]
+```
+
+Notification service:
+
+```dockerfile
+FROM python:3.12-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY app.py .
+
+RUN mkdir -p /app/logs
+
+EXPOSE 5001
+
+CMD ["python", "app.py"]
+```
+
+### 2. Build the Docker Images
 
 Run from the lab root:
 
@@ -87,7 +147,7 @@ docker build -t lab7-notification ./app/notification
 docker images lab7-frontend lab7-backend lab7-notification
 ```
 
-### 2. Create the Bridge Networks
+### 3. Create the Bridge Networks
 
 Create two separate bridge networks. These are the subnets used for this lab:
 
@@ -100,7 +160,7 @@ docker network inspect frontend-backend backend-notification \
 
 User-defined bridge networks provide container-name DNS resolution between containers attached to the same network.
 
-### 3. Create Persistent Storage
+### 4. Create Persistent Storage
 
 ```bash
 docker volume create backend-logs
@@ -114,7 +174,7 @@ mkdir -p app/data
 | `notification-logs` | Named volume | `/app/logs` |
 | `app/data/` | Bind mount | `/app/data` |
 
-### 4. Start the Notification Service
+### 5. Start the Notification Service
 
 ```bash
 docker run -d \
@@ -124,7 +184,7 @@ docker run -d \
   lab7-notification
 ```
 
-### 5. Start the Backend
+### 6. Start the Backend
 
 Start the backend on `backend-notification`, configure the notification URL, and connect it to the frontend network:
 
@@ -141,7 +201,7 @@ docker network connect frontend-backend backend
 
 The backend is attached to both networks so it can communicate with the frontend and notification service.
 
-### 6. Start the Frontend
+### 7. Start the Frontend
 
 ```bash
 docker run -d \
@@ -157,11 +217,11 @@ docker network inspect frontend-backend backend-notification \
 
 ## Verification
 
-### 7. Test the Application
+### 8. Test the Application
 
 Open <http://localhost:8080>, create a few test messages, and verify they appear in the application.
 
-### 8. Verify Data and Logs
+### 9. Verify Data and Logs
 
 ```bash
 cat app/data/messages.json
@@ -171,7 +231,7 @@ docker exec notification tail -n 10 /app/logs/notification.log
 
 The message data should be visible in the host directory, while the named volumes store the service logs.
 
-### 9. Verify Network Isolation
+### 10. Verify Network Isolation
 
 The backend should reach the notification service:
 
@@ -187,7 +247,7 @@ docker exec frontend python -c \
   "import urllib.request as u; print(u.urlopen('http://notification:5001/health', timeout=3).read())"
 ```
 
-### 10. Verify Persistence
+### 11. Verify Persistence
 
 After creating messages, recreate the backend container using the same bind mount and named volume, then reconnect it to both networks:
 

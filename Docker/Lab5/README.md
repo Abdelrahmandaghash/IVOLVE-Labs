@@ -50,7 +50,42 @@ Lab5/
 
 ## Implementation
 
-### 1. Build the Baseline Image
+### 1. Dockerfiles
+
+The baseline Dockerfile uses Node 18 Bullseye and the preserved baseline package manifest:
+
+```dockerfile
+FROM node:18-bullseye
+
+WORKDIR /app
+COPY package.json.v1 ./package.json
+RUN npm install
+COPY app.js ./
+EXPOSE 3000
+CMD ["npm", "start"]
+```
+
+The updated multi-stage Dockerfile installs production dependencies on Node 22 Alpine and runs the app as the non-root `node` user:
+
+```dockerfile
+FROM node:22-alpine AS dependencies
+
+WORKDIR /app
+COPY package.json ./
+RUN npm install --omit=dev && npm cache clean --force
+
+FROM node:22-alpine
+ENV NODE_ENV=production
+WORKDIR /app
+RUN rm -rf /usr/local/lib/node_modules/npm /usr/local/bin/npm /usr/local/bin/npx
+COPY --from=dependencies --chown=node:node /app/node_modules ./node_modules
+COPY --chown=node:node app.js package.json ./
+USER node
+EXPOSE 3000
+CMD ["node", "app.js"]
+```
+
+### 2. Build the Baseline Image
 
 Run from the lab root:
 
@@ -58,7 +93,7 @@ Run from the lab root:
 docker build -f app/Dockerfile.v1 -t trivy-lab:v1 app
 ```
 
-### 2. Scan the Baseline
+### 3. Scan the Baseline
 
 The saved reports are preserved under `app/reports/`.
 
@@ -69,7 +104,7 @@ docker run --rm -v /var/run/docker.sock:/var/run/docker.sock \
   aquasec/trivy:0.76.1 image --severity HIGH,CRITICAL trivy-lab:v1
 ```
 
-### 3. Build and Scan the Updated Image
+### 4. Build and Scan the Updated Image
 
 ```bash
 docker build -t ivolve-app:v2 app

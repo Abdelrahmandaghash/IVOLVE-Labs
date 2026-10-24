@@ -43,7 +43,43 @@ Both images use `app/` as their build context.
 
 ## Implementation
 
-### 1. Build the Original Image
+### 1. Dockerfiles
+
+The original single-stage Dockerfile builds and runs the application in the Maven image:
+
+```dockerfile
+FROM maven:3.9.15-eclipse-temurin-17-alpine
+
+WORKDIR /app
+
+COPY . .
+
+RUN mvn package
+
+EXPOSE 8080
+
+CMD ["java", "-jar", "target/demo-0.0.1-SNAPSHOT.jar"]
+```
+
+The optimized multi-stage Dockerfile builds in the Maven stage, then copies only the packaged JAR into the JRE runtime image:
+
+```dockerfile
+FROM maven:3.9.15-eclipse-temurin-17-alpine AS build
+WORKDIR /build
+COPY pom.xml .
+COPY src ./src
+RUN mvn -B -DskipTests package
+
+FROM eclipse-temurin:17-jre-alpine
+RUN addgroup -S app && adduser -S -G app app
+WORKDIR /app
+COPY --from=build --chown=app:app /build/target/demo-0.0.1-SNAPSHOT.jar app.jar
+USER app
+EXPOSE 8080
+ENTRYPOINT ["java", "-jar", "app.jar"]
+```
+
+### 2. Build the Original Image
 
 From the lab root:
 
@@ -52,14 +88,14 @@ docker build -f app/Dockerfile.original -t image1 app
 docker image inspect image1 --format '{{.Size}}'
 ```
 
-### 2. Build the Optimized Image
+### 3. Build the Optimized Image
 
 ```bash
 docker build -t image2 app
 docker image inspect image2 --format '{{.Size}}'
 ```
 
-### 3. Save and Restore the Optimized Image
+### 4. Save and Restore the Optimized Image
 
 ```bash
 docker save -o lab-image.tar image2
