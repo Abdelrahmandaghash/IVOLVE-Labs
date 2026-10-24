@@ -67,7 +67,60 @@ EXPOSE 3000
 CMD ["node", "server.js"]
 ```
 
-### 2. Configure Environment Variables
+### 2. Docker Compose Configuration
+
+The Compose file builds the app from this directory, waits for MySQL's health check, and puts both services on the `ivolve-net` bridge network. Named volumes persist the app logs and database files:
+
+```yaml
+services:
+  app:
+    build: .
+    image: ${DOCKERHUB_USERNAME:-your-dockerhub-username}/ivolve-app:latest
+    ports:
+      - "3000:3000"
+    environment:
+      DB_HOST: mysql
+      DB_USER: ivolve
+      DB_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+      DB_NAME: ivolve
+    volumes:
+      - app_logs:/app/logs
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - ivolve-net
+
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?Set MYSQL_ROOT_PASSWORD in .env}
+      MYSQL_DATABASE: ivolve
+      MYSQL_USER: ivolve
+      MYSQL_PASSWORD: ${DB_PASSWORD:?Set DB_PASSWORD in .env}
+    volumes:
+      - db_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$${MYSQL_ROOT_PASSWORD}\" --silent"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 20s
+    networks:
+      - ivolve-net
+
+networks:
+  ivolve-net:
+    name: ivolve-net
+    driver: bridge
+
+volumes:
+  app_logs:
+  db_data:
+    name: db_data
+```
+
+### 3. Configure Environment Variables
 
 Create a local `.env` file from `.env.example` and set the values locally. Do not commit the resulting `.env` file.
 
@@ -77,7 +130,7 @@ Create a local `.env` file from `.env.example` and set the values locally. Do no
 | `MYSQL_ROOT_PASSWORD` | MySQL root account |
 | `DB_PASSWORD` | MySQL application user and Node.js connection |
 
-### 3. Validate and Start the Compose Stack
+### 4. Validate and Start the Compose Stack
 
 Run from the lab root:
 
@@ -92,7 +145,7 @@ docker compose ps
 
 Compose requires both database passwords. Wait until MySQL is healthy and the app is running.
 
-### 4. Build and Publish the App Image
+### 5. Build and Publish the App Image
 
 The Compose image name uses `DOCKERHUB_USERNAME/ivolve-app:latest`. Authenticate with Docker Hub and set `DOCKERHUB_USERNAME` to the account that owns the target repository before pushing.
 
