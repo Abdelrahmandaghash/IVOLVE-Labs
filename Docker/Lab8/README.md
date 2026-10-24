@@ -6,6 +6,8 @@
 
 ## Steps
 
+### Part 1: Configure the Compose stack
+
 1. Enter the application directory and create a local environment file.
 
    ```bash
@@ -14,6 +16,8 @@
    ```
 
    Edit `.env` and replace `DOCKERHUB_USERNAME`, `MYSQL_ROOT_PASSWORD`, and `DB_PASSWORD` with your own values. Do not commit this file.
+
+### Part 2: Start and verify the services
 
 2. Validate the Compose configuration and start the services.
 
@@ -35,6 +39,8 @@
    ```
 
    Expect the site to load, `/health` to confirm its MySQL connection, and `/api/products` to return the three seeded products.
+
+### Part 3: Publish the app image
 
 4. Build and push the app image when you are ready to publish it.
 

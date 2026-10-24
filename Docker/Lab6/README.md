@@ -6,6 +6,8 @@
 
 ## Steps
 
+### Part 1: Set runtime variables and resource limits
+
 1. Enter the application directory and build the common image.
 
    ```bash
@@ -28,6 +30,8 @@
 
    Expect the response to contain `iVolveApp1` and `stg`. The inspect output should show `1000000000 268435456`, corresponding to one CPU and 256 MiB.
 
+### Part 2: Load variables from an environment file
+
 3. Load variables from the environment file.
 
    ```bash
@@ -36,6 +40,8 @@
    ```
 
    Expect the response to contain `iVolveApp2` and `prod`, the values in `env.txt`.
+
+### Part 3: Set defaults in the Dockerfile
 
 4. Build and run the image with Dockerfile defaults.
 

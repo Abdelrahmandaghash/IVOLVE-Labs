@@ -6,6 +6,8 @@
 
 ## Steps
 
+### Part 1: Prepare the baseline image
+
 1. Enter the application directory and check Trivy.
 
    ```bash
@@ -23,6 +25,8 @@
    ```
 
    Expect the image to use the preserved Node 18 Bullseye and Express 4.18.2 baseline.
+
+### Part 2: Build the updated image and compare scan results
 
 3. Scan the baseline and updated images.
 

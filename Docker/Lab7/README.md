@@ -6,6 +6,8 @@
 
 ## Steps
 
+### Part 1: Build the service images
+
 1. Enter the application directory and build the three service images.
 
    ```bash
@@ -16,6 +18,8 @@
    ```
 
    Expect one image for each service.
+
+### Part 2: Create the networks and start the services
 
 2. Create the lab networks and log volumes.
 
@@ -43,6 +47,8 @@
    ```
 
    Expect the frontend at `http://localhost:8080/` and the backend verification endpoint at `http://localhost:5000/messages`.
+
+### Part 3: Send a message and verify persistence
 
 4. Send a message in the frontend form, then verify storage and logs.
 

@@ -6,6 +6,8 @@
 
 ## Steps
 
+### Part 1: Build and run the original image
+
 1. Enter the application build context.
 
    ```bash
@@ -34,6 +36,8 @@
 
    Expect the response `Hello from Dockerized Spring Boot!`.
 
+### Part 2: Build and run the optimized image
+
 4. Build and inspect the optimized image.
 
    ```bash
@@ -54,6 +58,8 @@
    ```
 
    Expect the same application response and a non-root identity (`uid=100(app)`).
+
+### Part 3: Save and reload the optimized image
 
 6. Save and reload the optimized image.
 
